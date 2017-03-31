@@ -1,0 +1,61 @@
+import os.path as osp
+
+from chainercv.datasets.cub.cub_utils import CUBDatasetBase
+from chainercv import utils
+
+
+class CUBLabelDataset(CUBDatasetBase):
+
+    """`Caltech-UCSD Birds-200-2011`_ dataset  with annotated class labels.
+
+    .. _`Caltech-UCSD Birds-200-2011`:
+        http://www.vision.caltech.edu/visipedia/CUB-200-2011.html
+
+    When queried by an index, this dataset returns a corresponding
+    :obj:`img, label`, a tuple of an image and class id.
+    The image is in BGR and CHW format.
+    The class id are between 0 and 199.
+
+    There are 200 labels of birds in total.
+
+    Args:
+        data_dir (string): Path to the root of the training data. If this is
+            :obj:`auto`, this class will automatically download data for you
+            under :obj:`$CHAINER_DATASET_ROOT/pfnet/chainercv/cub`.
+        crop_bbox (bool): If true, this class returns an image cropped
+            by the bounding box of the bird inside it.
+
+    """
+
+    def __init__(self, data_dir='auto', crop_bbox=True):
+        super(CUBLabelDataset, self).__init__(
+            data_dir=data_dir, crop_bbox=crop_bbox)
+
+        image_class_labels_file = osp.join(
+            self.data_dir, 'image_class_labels.txt')
+        self._data_labels = [int(d_label.split()[1]) - 1 for
+                             d_label in open(image_class_labels_file)]
+
+    def get_example(self, i):
+        """Returns the i-th example.
+
+        Args:
+            i (int): The index of the example.
+
+        Returns:
+            tuple of an image and its label.
+
+        """
+        img = utils.read_image_as_array(
+            osp.join(self.data_dir, 'images', self.fns[i]))  # RGB
+        if img.ndim == 2:
+            img = utils.gray2rgb(img)
+
+        if self.crop_bbox:
+            bbox = self.bboxes[i]  # (x, y, width, height)
+            img = img[bbox[1]: bbox[1] + bbox[3], bbox[0]: bbox[0] + bbox[2]]
+        label = self._data_labels[i]
+
+        img = img[:, :, ::-1]  # RGB to BGR
+        img = img.transpose(2, 0, 1)
+        return img, label
