@@ -1,0 +1,21 @@
+# -*- coding: utf-8 -*-
+
+
+from setuptools import setup
+
+__author__ = 'zhengz'
+
+setup(
+    name='platformo-client',
+    version='0.0.1',
+    description=u'收集Flask的请求响应时间并发送至logstash',
+    keywords='logstash flask',
+
+    license='MIT',
+    install_requires=['requests'],
+
+    author='zhengz',
+    author_email='zhengz@miriding.com',
+
+    packages=['platform_monitor_client']
+)
