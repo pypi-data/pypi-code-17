@@ -1,0 +1,7 @@
+__version__ = "1.4.0"
+__title__ = "Spirit"
+__description__ = "Optimizations and Dynamics Framework for atomistic Spin systems"
+__uri__ = "https://github.com/spirit-code/spirit"
+__license__ = "MIT"
+__author__ = "-"
+__email__ = "g.mueller@fz-juelich.de"
