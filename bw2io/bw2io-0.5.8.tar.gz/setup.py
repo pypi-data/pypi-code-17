@@ -1,0 +1,57 @@
+from setuptools import setup
+import io
+import os
+
+setup(
+    name='bw2io',
+    version="0.5.8",
+    packages=[
+        'bw2io',
+        'bw2io.data',
+        'bw2io.export',
+        'bw2io.extractors',
+        'bw2io.importers',
+        'bw2io.strategies',
+    ],
+    package_data={'bw2io': [
+        "data/*.*",
+        "data/lci/*.*",
+        "data/lcia/*.*",
+    ]},
+    author="Chris Mutel",
+    author_email="cmutel@gmail.com",
+    license=io.open('LICENSE.txt', encoding='utf-8').read(),
+    install_requires=[
+        "bw2calc>=1.4",
+        "bw2data>=2.3",
+        "lxml",
+        "numpy",
+        "psutil",
+        "pyprind",
+        "scipy",
+        "stats_arrays",
+        "unidecode",
+        "voluptuous",
+        "xlsxwriter",
+        "xlrd",
+    ],
+    url="https://bitbucket.org/cmutel/brightway2-io",
+    long_description=io.open('README.rst', encoding='utf-8').read(),
+    description=('Tools for importing and export life cycle inventory databases'),
+    classifiers=[
+        'Development Status :: 5 - Production/Stable',
+        'Intended Audience :: End Users/Desktop',
+        'Intended Audience :: Developers',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved :: BSD License',
+        'Operating System :: MacOS :: MacOS X',
+        'Operating System :: Microsoft :: Windows',
+        'Operating System :: POSIX',
+        'Programming Language :: Python',
+        'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 2 :: Only',
+        'Topic :: Scientific/Engineering :: Information Analysis',
+        'Topic :: Scientific/Engineering :: Mathematics',
+        'Topic :: Scientific/Engineering :: Visualization',
+    ],
+)
