@@ -1,0 +1,199 @@
+# -*- coding: utf-8 -*-
+
+"""
+
+PyBEL's main data structure is a subclass of NetworkX MultiDiGraph.
+
+The graph contains metadata for the PyBEL version, the BEL script metadata, the namespace definitions, the
+annotation definitions, and the warnings produced in analysis. Like any :code:`networkx` graph, all attributes of
+a given object can be accessed through the :code:`graph` property, like in: :code:`my_graph.graph['my key']`.
+Convenient property definitions are given for these attributes.
+
+"""
+
+import itertools as itt
+import logging
+
+import networkx as nx
+
+from .constants import *
+from .utils import get_version, subdict_matches
+
+try:
+    import cPickle as pickle
+except ImportError:
+    import pickle
+
+__all__ = ['BELGraph']
+
+log = logging.getLogger(__name__)
+
+
+class BELGraph(nx.MultiDiGraph):
+    """The BELGraph class is a container for BEL networks that is based on the NetworkX MultiDiGraph data structure"""
+
+    def __init__(self, **kwargs):
+        """The default constructor parses a BEL graph using the built-in NetworkX methods. For IO, see
+        the pybel.io module
+
+        :param kwargs: keyword arguments to pass to :class:`networkx.MultiDiGraph`
+        :type kwargs: dict
+        """
+        nx.MultiDiGraph.__init__(self, **kwargs)
+
+        self._warnings = []
+
+        if GRAPH_METADATA not in self.graph:
+            self.graph[GRAPH_METADATA] = {}
+
+        if GRAPH_PYBEL_VERSION not in self.graph:
+            self.graph[GRAPH_PYBEL_VERSION] = get_version()
+
+        #: Is true if during BEL Parsing, a term that is not part of a relation is found
+        self.has_singleton_terms = False
+
+    @property
+    def document(self):
+        """A dictionary holding the metadata from the "Document" section of the BEL script. All keys are normalized
+        according to :data:`pybel.constants.DOCUMENT_KEYS`
+        """
+        return self.graph[GRAPH_METADATA]
+
+    @property
+    def name(self, *attrs):
+        """Gets the graph's name. Requires a weird hack in the signature since it's overriding a property"""
+        return self.graph[GRAPH_METADATA].get(METADATA_NAME, '')
+
+    @name.setter
+    def name(self, *attrs, **kwargs):
+        self.graph[GRAPH_METADATA][METADATA_NAME] = attrs[0]
+
+    @property
+    def version(self):
+        """The graph's version, from the SET DOCUMENT section of the source BEL script"""
+        return self.graph[GRAPH_METADATA].get(METADATA_VERSION)
+
+    @property
+    def namespace_url(self):
+        """A dictionary mapping the keywords used to create this graph to the URLs of the BELNS file"""
+        return self.graph.get(GRAPH_NAMESPACE_URL, {})
+
+    @property
+    def namespace_owl(self):
+        """A dictionary mapping the keywords used to create this graph to the URLs of the OWL file"""
+        return self.graph.get(GRAPH_NAMESPACE_OWL, {})
+
+    @property
+    def namespace_pattern(self):
+        """A dictionary mapping the namespace keywords used to create this graph to their regex patterns"""
+        return self.graph.get(GRAPH_NAMESPACE_PATTERN, {})
+
+    @property
+    def annotation_url(self):
+        """A dictionary mapping the annotation keywords used to create this graph to the URLs of the BELANNO file"""
+        return self.graph.get(GRAPH_ANNOTATION_URL, {})
+
+    @property
+    def annotation_owl(self):
+        """A dictionary mapping the annotation keywords to the URL of the OWL file"""
+        return self.graph.get(GRAPH_ANNOTATION_OWL, {})
+
+    @property
+    def annotation_pattern(self):
+        """A dictionary mapping the annotation keywords used to create this graph to their regex patterns"""
+        return self.graph.get(GRAPH_ANNOTATION_PATTERN, {})
+
+    @property
+    def annotation_list(self):
+        """A dictionary mapping the keywords of locally defined annotations to a set of their values"""
+        return self.graph.get(GRAPH_ANNOTATION_LIST, {})
+
+    @property
+    def pybel_version(self):
+        """Stores the version of PyBEL with which this graph was produced as a string"""
+        return self.graph[GRAPH_PYBEL_VERSION]
+
+    @property
+    def warnings(self):
+        """Warnings are stored in a list of 4-tuples that is a property of the graph object.
+        This tuple respectively contains the line number, the line text, the exception instance, and the context
+        dictionary from the parser at the time of error.
+        """
+        return self._warnings
+
+    def add_warning(self, line_number, line, exception, context=None):
+        """Adds a warning to the internal warning log in the graph, with optional context information"""
+        self.warnings.append((line_number, line, exception, {} if context is None else context))
+
+    def add_unqualified_edge(self, u, v, relation):
+        """Adds unique edge that has no annotations
+
+        :param u: The source BEL node
+        :type u: tuple
+        :param v: The target BEL node
+        :type v: tuple
+        :param relation: A relationship label from :code:`pybel.constants`
+        :type relation: str
+        """
+        key = unqualified_edge_code[relation]
+        if not self.has_edge(u, v, key):
+            self.add_edge(u, v, key=key, **{RELATION: relation, ANNOTATIONS: {}})
+
+    def edges_iter(self, nbunch=None, data=False, keys=False, default=None, **kwargs):
+        """Allows for filtering by checking keyword arguments are a subdictionary of each edges' data.
+            See :py:meth:`networkx.MultiDiGraph.edges_iter`"""
+        for u, v, k, d in nx.MultiDiGraph.edges_iter(self, nbunch=nbunch, data=True, keys=True, default=default):
+            if not subdict_matches(d, kwargs):
+                continue
+            elif keys and data:
+                yield u, v, k, d
+            elif data:
+                yield u, v, d
+            elif keys:
+                yield u, v, k
+            else:
+                yield u, v
+
+    def nodes_iter(self, data=False, **kwargs):
+        """Allows for filtering by checking keyword arguments are a subdictionary of each nodes' data.
+            See :py:meth:`networkx.MultiDiGraph.edges_iter`"""
+        for n, d in nx.MultiDiGraph.nodes_iter(self, data=True):
+            if not subdict_matches(d, kwargs):
+                continue
+            elif data:
+                yield n, d
+            else:
+                yield n
+
+    def add_simple_node(self, function, namespace, name):
+        """Adds a simple node, with only a namespace and name
+
+        :param function: The node's function (GENE, RNA, PROTEIN, etc)
+        :type function: str
+        :param namespace: The namespace
+        :type namespace: str
+        :param name: The name of the node
+        :type name: str
+        """
+        node = function, namespace, name
+        if node not in self:
+            self.add_node(node, **{FUNCTION: function, NAMESPACE: namespace, NAME: name})
+
+    def __eq__(self, other):
+
+        if not isinstance(other, BELGraph):
+            return False
+
+        if set(self.nodes_iter()) != set(other.nodes_iter()):
+            return False
+
+        if set(self.edges_iter()) != set(other.edges_iter()):
+            return False
+
+        for u, v in self.edges():
+            i = itt.product(self.edge[u][v].values(), other.edge[u][v].values())
+            r = list(filter(lambda q: q[0] == q[1], i))
+            if len(self.edge[u][v]) != len(r):
+                return False
+
+        return True
