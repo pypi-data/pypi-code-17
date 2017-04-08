@@ -1,0 +1,6 @@
+GENDER = "gender"
+AGE_GROUP = "age_group"
+RELATIONSHIP = "relationship"
+EDUCATION_LEVEL = "education_level"
+INCOME = "income"
+OCCUPATION = "occupation"
