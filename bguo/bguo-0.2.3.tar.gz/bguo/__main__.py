@@ -1,0 +1,2 @@
+import bguo
+bguo.main()
