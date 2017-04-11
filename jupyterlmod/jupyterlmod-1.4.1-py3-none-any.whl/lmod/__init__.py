@@ -1,0 +1,47 @@
+import os # require by lmod output evaluated by exec()
+
+from functools import partial
+from os import environ
+from subprocess import Popen, PIPE
+
+LMOD_SYSTEM_NAME = environ.get('LMOD_SYSTEM_NAME', '')
+
+def module(command, *args):
+    cmd = (environ['LMOD_CMD'], 'python', '--terse', command)
+
+    result = Popen(cmd + args, stdout=PIPE, stderr=PIPE)
+    if command in ('load', 'unload', 'restore', 'save'):
+        exec(result.stdout.read())
+
+    return result.stderr.read().decode()
+
+def avail():
+    string = module('avail')
+    modules = []
+    for entry in string.split():
+        if not (entry.startswith('/') or entry.endswith('/')):
+            modules.append(entry)
+    return modules
+
+def list(hidden=True):
+    string = module('list').strip()
+    if string != "No modules loaded":
+        modules = string.split()
+        if hidden:
+            modules = [m for m in modules if m.rsplit('/', 1)[-1][0] != '.']
+        return modules
+    return []
+
+def savelist(system=LMOD_SYSTEM_NAME):
+    names = module('savelist').split()
+    if system:
+        suffix = '.{}'.format(system)
+        n = len(suffix)
+        names = [name[:-n] for name in names if name.endswith(suffix)]
+    return names
+
+show = partial(module, 'show')
+load = partial(module, 'load')
+unload = partial(module, 'unload')
+restore = partial(module, 'restore')
+save = partial(module, 'save')
