@@ -1,0 +1,4 @@
+BASE_URL = None
+API_KEY = None
+SECRET_KEY = None
+CUSTOMER_ID = None
