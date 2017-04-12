@@ -1,0 +1,11 @@
+__version__ = "1.0.23.post5"
+__git_commiter_name__ = "Arnon Yaari"
+__git_commiter_email__ = "arnony@infinidat.com"
+__git_branch__ = u'develop'
+__git_remote_tracking_branch__ = u'origin/develop'
+__git_remote_url__ = u'git@git.infinidat.com:host-opensource/infi.app_repo.git'
+__git_head_hash__ = 'a766959203ec55cca063f6b5cc4c5ecd321a30ab'
+__git_head_subject__ = u'ipython 6 does not support Python 2.7'
+__git_head_message__ = u''
+__git_dirty_diff__ = u''
+__git_commit_date__ = '2017-04-12 12:32:42'
