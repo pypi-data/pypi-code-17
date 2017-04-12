@@ -1,0 +1,142 @@
+import logging
+
+from .command import Command
+logger = logging.getLogger(__name__)
+
+
+class Profiles(Command):
+    def __init__(self, *args, **kwargs):
+        self._logger = logger
+        super(Profiles, self).__init__(*args, **kwargs)
+
+    def list(self, all=False):
+        logger.debug('Going to list profiles..')
+        all_profiles = self._config.faaspot.profiles
+        return all_profiles.todict()
+
+    def create(self, name, faaspot_host, username=None, password=None, token=None,
+               certificate=None, update_if_exist=False):
+        logger.debug('Going to create a profile')
+        if not faaspot_host:
+            raise Exception("Missing arguments. Please provide host")
+        if self._profile_exists(name):
+            if not update_if_exist:
+                raise Exception("Command invalid. Profile `{0}` already exists".format(name))
+            return self.update(name, faaspot_host, username, password, token, certificate)
+        profile = self._profile_dict(faaspot_host,
+                                     username=username,
+                                     password=password,
+                                     token=token,
+                                     certificate=certificate)
+        self._config.faaspot.profiles[name] = profile
+        self._config.save()
+        return 'Profile created: {0}'.format(name)
+
+    def update(self, name, faaspot_host, username=None, password=None, token=None,
+               certificate=None):
+        try:
+            profile_name = name or self._config.faaspot.profile
+            logger.debug('Going to update profile `{0}`'.format(profile_name))
+            profile = self._get_profile_or_raise(name)
+            profile = self._profile_dict(faaspot_host,
+                                         username=username,
+                                         password=password,
+                                         token=token,
+                                         certificate=certificate,
+                                         current=profile)
+            self._config.faaspot.profiles[name] = profile
+            self._config.save()
+            return 'Profile `{0}` updated successfully'.format(name)
+        except Exception as ex:
+            logger.error(ex, exc_info=True)
+            raise
+
+    def get(self, name):
+        logger.debug('Going to return `{0}` profile info'.format(name))
+        profile_name = name
+        profile = self._get_profile_or_raise(name)
+        return '`{0}` profile data: {1}'.format(profile_name, profile)
+
+    def use(self, name):
+        logger.debug('Going to change current profile to: {0}'.format(name))
+        self._get_profile_or_raise(name)
+        self._config.faaspot.profile = name
+        self._config.save()
+        return 'Current profile: {0}'.format(name)
+
+    def current(self):
+        logger.debug('Going to return current profile info')
+        profile_name = self._config.faaspot.profile
+        profile = self._get_profile_or_raise(profile_name)
+        return 'Profile `{0}`: {1}'.format(profile_name, profile)
+
+    def delete(self, name, force):
+        if not force:
+            raise Exception('Failed to delete profile, must supply --force flag')
+        logger.debug('Going to delete profile `{0}`'.format(name))
+        self._get_profile_or_raise(name)
+        del self._config.faaspot.profiles[name]
+        if self._config.faaspot.profile == name:
+            self._config.faaspot.profile = ''
+        self._config.save()
+        return "Profile `{0}` deleted".format(name)
+
+    def _get_profile_or_raise(self, name):
+        try:
+            profile = self._config.faaspot.profiles[name]
+        except KeyError:
+            raise Exception('Failed retrieving profile `{0}` - '
+                            'profile does not exist'.format(name))
+        return profile
+
+    def _profile_exists(self, name):
+        try:
+            self._config.faaspot.profiles[name]
+        except KeyError:
+            return False
+        return True
+
+    @staticmethod
+    def _profile_dict(faaspot_host, username=None, password=None, token=None,
+                      certificate=None, trust_all=None, ssl_enabled=None,
+                      current=None):
+        faaspot_port = None
+        host_data = faaspot_host.split(':')
+        if len(host_data) == 2:
+            faaspot_host, faaspot_port = host_data
+        if current:
+            # We're using ".ger" since this parameters might not exists in current profile settings
+            faaspot_host = faaspot_host or current.host
+            username = username or current.get('username')
+            password = password or current.get('password')
+            token = token or current.get('token')
+            faaspot_port = faaspot_port or current.get('port')
+            certificate = certificate or current.get('ssl_certificate')
+            trust_all = trust_all or current.get('ssl_trust_all')
+            ssl_enabled = ssl_enabled or current.get('ssl_enabled')
+        profile_data = {
+            'host': faaspot_host,
+        }
+        if username:
+            profile_data['username'] = password
+        if password:
+            profile_data['password'] = password
+        if token:
+            profile_data['token'] = token
+        if faaspot_port:
+            profile_data['port'] = faaspot_port
+        if certificate:
+            profile_data['ssl_certificate'] = certificate
+        if trust_all:
+            profile_data['ssl_trust_all'] = trust_all
+        if ssl_enabled:
+            profile_data['ssl_enabled'] = ssl_enabled
+        return profile_data
+
+    @staticmethod
+    def _extract_host_info(host):
+        if not host:
+            return None, None
+        if ':' not in host:
+            host += ':80'
+        return host.split(':')
