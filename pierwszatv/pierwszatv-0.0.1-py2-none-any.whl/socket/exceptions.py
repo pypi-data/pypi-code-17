@@ -1,0 +1,2 @@
+class PierwszaTvSocketError(Exception):
+    pass
