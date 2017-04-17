@@ -1,0 +1,5 @@
+#!/usr/bin/python
+# -*- coding: UTF-8 -*-
+'''
+Commonly used helper functions, to support in the setup of specific transformations
+'''
