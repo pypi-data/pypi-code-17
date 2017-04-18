@@ -1,0 +1,29 @@
+from setuptools import setup
+import ast
+
+from staticjam import __version__
+
+
+with open('staticjam/staticjam.py') as f:
+    staticjam_contents = f.read()
+
+module = ast.parse(staticjam_contents)
+readme_docstring = ast.get_docstring(module)
+
+setup(
+    name='staticjam',
+    version=__version__,
+    description='markdown + jinja, static site generator',
+    long_description=readme_docstring,
+    author='SlimeMaid',
+    author_email='SlimeMaid@gmail.com',
+    keywords='cli',
+    install_requires=['jinja2', 'bs4', 'docopt', 'markdown',],
+    packages=['staticjam',],
+    entry_points = {
+        'console_scripts': [
+            'staticjam=staticjam.staticjam:main',
+        ],
+    },
+    package_dir={'staticjam': 'staticjam'},
+)
