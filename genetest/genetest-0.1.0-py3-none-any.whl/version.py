@@ -1,0 +1,3 @@
+
+# THIS FILE WAS GENERATED AUTOMATICALLY
+genetest_version = "0.1.0"
