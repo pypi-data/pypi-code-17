@@ -1,0 +1,62 @@
+# Test methods with long descriptive names can omit docstrings
+# pylint: disable=missing-docstring
+import numpy as np
+
+from Orange.data import Table
+from Orange.distance import MahalanobisDistance, Mahalanobis
+from Orange.widgets.unsupervised.owdistances import OWDistances, METRICS
+from Orange.widgets.tests.base import WidgetTest
+
+
+class TestOWDistances(WidgetTest):
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.iris = Table("iris")
+        cls.titanic = Table("titanic")
+
+    def setUp(self):
+        self.widget = self.create_widget(OWDistances)
+
+    def test_distance_combo(self):
+        """Check distances when the metric changes"""
+        self.assertEqual(self.widget.metrics_combo.count(), len(METRICS))
+        self.send_signal("Data", self.iris)
+        for i, metric in enumerate(METRICS):
+            if isinstance(metric, MahalanobisDistance):
+                metric.fit(self.iris)
+            self.widget.metrics_combo.activated.emit(i)
+            self.widget.metrics_combo.setCurrentIndex(i)
+            self.send_signal("Data", self.iris)
+            np.testing.assert_array_equal(
+                metric(self.iris), self.get_output("Distances"))
+
+    def test_error_message(self):
+        """Check if error message appears and then disappears when
+        data is removed from input"""
+        self.send_signal("Data", self.iris)
+        self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
+        self.send_signal("Data", self.titanic)
+        self.assertTrue(self.widget.Error.no_continuous_features.is_shown())
+        self.send_signal("Data", None)
+        self.assertFalse(self.widget.Error.no_continuous_features.is_shown())
+
+    def test_mahalanobis_error(self):
+        self.widget.metric_idx = METRICS.index(Mahalanobis)
+        self.widget.autocommit = True
+
+        invalid = self.iris[:]
+        invalid.X = np.vstack((invalid.X[0], invalid.X[0]))
+        invalid.Y = np.vstack((invalid.Y[0], invalid.Y[0]))
+        datasets = [self.iris, None, invalid]
+        bad = [False, False, True]
+        out = [True, False, False]
+
+        for data1, bad1, out1 in zip(datasets, bad, out):
+            for data2, bad2, out2 in zip(datasets, bad, out):
+                self.send_signal("Data", data1)
+                self.assertEqual(self.widget.Error.mahalanobis_error.is_shown(), bad1)
+                self.assertEqual(self.get_output("Distances") is not None, out1)
+                self.send_signal("Data", data2)
+                self.assertEqual(self.widget.Error.mahalanobis_error.is_shown(), bad2)
+                self.assertEqual(self.get_output("Distances") is not None, out2)
