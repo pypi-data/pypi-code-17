@@ -1,0 +1,12 @@
+from setuptools import setup
+
+setup(name='ppg_common',
+      version='1.3',
+      description='Clients',
+      url='https://bitbucket.org/sbg-interns/ppg_common',
+      author='Sbg Core Interns',
+      author_email='strahinja.kovacevic994@gmail.com',
+      install_requires=[
+          'requests==2.13.0', 'tornado==4.5'
+      ],
+      packages=['ppg_common', 'ppg_common.errors'])
