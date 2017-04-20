@@ -1,0 +1,14 @@
+from distutils.core import setup
+
+setup(
+    name='kanboard-gitlab',
+    packages=['kanboard-gitlab'],
+    version='0.2',
+    description='Script for migrating gitlab issues to kanboard',
+    author='Juracy Filho',
+    author_email='juracy@gmail.com',
+    url='https://github.com/dataprev/kanboard-import-gitlab',
+    download_url='https://github.com/dataprev/kanboard-import-gitlab/archive/0.1.tar.gz',
+    keywords=['gitlab', 'migration', 'kanboard'],
+    classifiers=[],
+)
