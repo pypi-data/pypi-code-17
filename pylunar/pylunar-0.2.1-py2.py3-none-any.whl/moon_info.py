@@ -1,0 +1,249 @@
+# -*- coding: utf-8 -*-
+# ------------------------------------------------------------------------------
+# Copyright (c) 2016-2017, Michael Reuter
+# Distributed under the MIT License. See LICENSE for more information.
+# ------------------------------------------------------------------------------
+from enum import Enum
+import math
+from operator import itemgetter
+
+import ephem
+
+from pylunar import mjd_to_date_tuple, tuple_to_string
+
+__all__ = ["MoonInfo"]
+
+class PhaseName(Enum):
+    NEW_MOON = 0
+    WAXING_CRESCENT = 1
+    FIRST_QUARTER = 2
+    WAXING_GIBBOUS = 3
+    FULL_MOON = 4
+    WANING_GIBBOUS = 5
+    LAST_QUARTER = 6
+    WANING_CRESCENT = 7
+
+class MoonInfo(object):
+    """Handle all moon information.
+
+    Attributes
+    ----------
+    observer : ephem.Observer instance.
+        The instance containing the observer's location information.
+    moon : ephem.Moon instance
+        The instance of the moon object.
+    """
+
+    DAYS_TO_HOURS = 24.0
+    MAIN_PHASE_CUTOFF = 2.0
+    # Time cutoff (hours) around the NM, FQ, FM, and LQ phases
+
+    reverse_phase_lookup = {
+        "new_moon": (ephem.previous_last_quarter_moon, "last_quarter"),
+        "first_quarter": (ephem.previous_new_moon, "new_moon"),
+        "full_moon": (ephem.previous_first_quarter_moon, "first_quarter"),
+        "last_quarter": (ephem.previous_full_moon, "full_moon")
+    }
+
+    def __init__(self, latitude, longitude, name=None):
+        """Initialize the class.
+
+        Parameters
+        ----------
+        latitude : tuple of 3 ints
+            The latitude of the observer.
+        longitude : tuple of 3 ints
+            The longitude of the observer.
+        name : str, optional
+            A name for the observer's location.
+        """
+        self.observer = ephem.Observer()
+        self.observer.lat = tuple_to_string(latitude)
+        self.observer.long = tuple_to_string(longitude)
+        self.moon = ephem.Moon()
+
+    def age(self):
+        """The moon's age in days.
+
+        Returns
+        -------
+        float
+        """
+        prev_new = ephem.previous_new_moon(self.observer.date)
+        return self.observer.date - prev_new
+
+    def altitude(self):
+        """The moon's altitude in degrees.
+
+        Returns
+        -------
+        float
+        """
+        return math.degrees(self.moon.alt)
+
+    def azimuth(self):
+        """The moon's azimuth in degrees.
+
+        Returns
+        -------
+        float
+        """
+        return math.degrees(self.moon.az)
+
+    def colong(self):
+        """The moon's selenographic colongitude in degrees.
+
+        Returns
+        -------
+        float
+        """
+        return math.degrees(self.moon.colong)
+
+    def fractional_phase(self):
+        """The moon's fractional illumination. Always less than 1.0.
+
+        Returns
+        -------
+        float
+        """
+        return self.moon.moon_phase
+
+    def libration_lat(self):
+        """The moon's current latitudinal libration in degrees.
+
+        Returns
+        -------
+        float
+        """
+        return math.degrees(self.moon.libration_lat)
+
+    def libration_lon(self):
+        """The moon's current longitudinal libration in degrees.
+
+        Returns
+        -------
+        float
+        """
+        return math.degrees(self.moon.libration_long)
+
+    def next_four_phases(self):
+        """The next for phases in date sorted order (closest phase first).
+
+        Returns
+        -------
+        list[(str, float)]
+            Set of moon phases specified by an abbreviated phase name and Modified Julian Date.
+        """
+        phases = {}
+        phases["new_moon"] = ephem.next_new_moon(self.observer.date)
+        phases["first_quarter"] = ephem.next_first_quarter_moon(self.observer.date)
+        phases["full_moon"] = ephem.next_full_moon(self.observer.date)
+        phases["last_quarter"] = ephem.next_last_quarter_moon(self.observer.date)
+
+        sorted_phases = sorted(phases.items(), key=itemgetter(1))
+        sorted_phases = [(phase[0], mjd_to_date_tuple(phase[1])) for phase in sorted_phases]
+
+        return sorted_phases
+
+    def phase_name(self):
+        """The standard name of the moon's phase, i.e. Waxing Cresent
+
+        This function returns a standard name for the moon's phase based on the current selenographic
+        colongitude.
+
+        Returns
+        -------
+        str
+        """
+        next_phase_name = self.next_four_phases()[0][0]
+        try:
+            next_phase_time = getattr(ephem, "next_{}".format(next_phase_name))(self.observer.date)
+        except AttributeError:
+            next_phase_time = getattr(ephem, "next_{}_moon".format(next_phase_name))(self.observer.date)
+        previous_phase = self.reverse_phase_lookup[next_phase_name]
+        time_to_next_phase = math.fabs(next_phase_time - self.observer.date) * self.DAYS_TO_HOURS
+        time_to_previous_phase = math.fabs(self.observer.date -
+                                           previous_phase[0](self.observer.date)) * self.DAYS_TO_HOURS
+        previous_phase_name = previous_phase[1]
+
+        if time_to_previous_phase < self.MAIN_PHASE_CUTOFF:
+            return getattr(PhaseName, previous_phase_name.upper()).name
+        elif time_to_next_phase < self.MAIN_PHASE_CUTOFF:
+            return getattr(PhaseName, next_phase_name.upper()).name
+        else:
+            if previous_phase_name == "new_moon" and next_phase_name == "first_quarter":
+                return PhaseName.WAXING_CRESCENT.name
+            elif previous_phase_name == "first_quarter" and next_phase_name == "full_moon":
+                return PhaseName.WAXING_GIBBOUS.name
+            elif previous_phase_name == "full_moon" and next_phase_name == "last_quarter":
+                return PhaseName.WANING_GIBBOUS.name
+            elif previous_phase_name == "last_quarter" and next_phase_name == "new_moon":
+                return PhaseName.WANING_CRESCENT.name
+
+    def time_from_new_moon(self):
+        """The time (hours) from the previous new moon.
+
+        This function calculates the time from the previous new moon.
+
+        Returns
+        -------
+        float
+        """
+        previous_new_moon = ephem.previous_new_moon(self.observer.date)
+        return MoonInfo.DAYS_TO_HOURS * (self.observer.date - previous_new_moon)
+
+    def time_to_full_moon(self):
+        """The time (days) to the next full moon.
+
+        This function calculates the time to the next full moon.
+
+        Returns
+        -------
+        float
+        """
+        next_full_moon = ephem.next_full_moon(self.observer.date)
+        return next_full_moon - self.observer.date
+
+    def time_to_new_moon(self):
+        """The time (hours) to the next new moon.
+
+        This function calculates the time to the next new moon.
+
+        Returns
+        -------
+        float
+        """
+        next_new_moon = ephem.next_new_moon(self.observer.date)
+        return MoonInfo.DAYS_TO_HOURS * (next_new_moon - self.observer.date)
+
+    def update(self, datetime):
+        """Update the moon information based on time.
+
+        This fuction updates the Observer instance's datetime setting. The incoming datetime tuple should be
+        in UTC with the following placement of values: (YYYY, m, d, H, M, S) as defined below::
+
+            YYYY
+                Four digit year
+
+            m
+                month (1-12)
+
+            d
+                day (1-31)
+
+            H
+                hours (0-23)
+
+            M
+                minutes (0-59)
+
+            S
+                seconds (0-59)
+
+        Parameters
+        ----------
+        datetime : tuple
+            The current UTC time in a tuple of numbers.
+        """
+        self.observer.date = datetime
+        self.moon.compute(self.observer)
