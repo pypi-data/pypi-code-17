@@ -1,0 +1,40 @@
+""" Loglarin RabbitMQ"ya aktarilmasi icin kullanilan sinif """
+import json
+import logging
+from hurriyetlog import hurriyetlog
+
+class RabbitMQHandler(logging.Handler):
+    """
+     A handler that acts as a RabbitMQ publisher
+     Requires the pika module.
+
+     Example setup::
+
+        handler = RabbitMQHandler("amqp://guest:guest@localhost/%2f", queue="HurLogQueue","application name")
+    """
+    def __init__(self, uri="", queue="", appname=""):
+        logging.Handler.__init__(self)
+        try:
+            import pika
+        except ImportError:
+            raise RuntimeError("The pika library is required for the RabbitMQSubscriber.")
+
+        try:
+            self.connection = pika.BlockingConnection(pika.URLParameters(uri))
+            self.queue = queue
+            self.appname = appname
+            self.channel = self.connection.channel()
+            self.channel.queue_declare(queue=queue, durable=False, exclusive=False, auto_delete=True)
+        except:
+            print("Connection error occured.")
+
+    def emit(self, record):
+        try:
+            log_obj = hurriyetlog.HurriyetLog(record, self.appname)
+            log_str = json.dumps(log_obj.to_json())
+            self.channel.basic_publish(exchange="", routing_key=self.queue, body=log_str)
+        except Exception as ex:
+            print("Logging exception:" + str(ex))
+
+    def close(self):
+        self.connection.close()
