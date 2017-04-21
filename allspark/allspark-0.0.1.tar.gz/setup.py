@@ -1,0 +1,60 @@
+"""Setup script for AllSpark-CLI."""
+from __future__ import print_function
+from setuptools import setup, find_packages
+import codecs
+import os
+import re
+
+HERE = os.path.abspath(os.path.dirname(__file__))
+
+
+def read(*parts):
+    """Return multiple read calls to different readable objects as a single
+    string."""
+    # intentionally *not* adding an encoding option to open
+    return codecs.open(os.path.join(HERE, *parts), 'r').read()
+
+
+def find_version(*file_paths):
+    """Find the "__version__" string in files on *file_path*."""
+    version_file = read(*file_paths)
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
+                              version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
+setup(
+    name='allspark',
+    version=find_version('allspark', '__init__.py'),
+    license='MIT',
+    author='Anthony Broome',
+    url = 'https://github.com/broomyocymru/allspark', # use the URL to the github repo
+    download_url = 'https://github.com/broomyocymru/allspark/archive/0.1.tar.gz',
+    setup_requires=['pytest-runner',],
+    tests_require=['pytest',],
+    install_requires=[],
+    author_email='anthony.broome@capgemini.com',
+    description='AllSpark CLI',
+    long_description="",
+    entry_points={
+        'console_scripts': [
+            'allspark = allspark.allspark:cli',
+        ],
+    },
+    packages=['allspark', 'allspark.core', 'allspark.commands', 'allspark.providers'],
+    include_package_data=True,
+    platforms='any',
+    zip_safe=False,
+    classifiers=[
+    'Development Status :: 3 - Alpha',
+
+    'Intended Audience :: Developers',
+    'Topic :: Software Development :: Build Tools',
+
+    'License :: OSI Approved :: MIT License',
+
+    'Programming Language :: Python :: 2.7',
+
+    ],
+)
