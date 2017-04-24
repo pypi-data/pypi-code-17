@@ -1,0 +1,55 @@
+import requests
+import vizontele
+
+
+class BaseCrawler:
+    headers = dict()
+    headers["Accept"] = "text/html,application/xhtml+xml," + \
+                        "application/xml;q=0.9,image/webp,*/*;q=0.8"
+    headers["Accept-Encoding"] = "gzip] = deflate] = sdch"
+    headers["Accept-Language"] = "en-US,en;q=0.8"
+    headers["Connection"] = "keep-alive"
+    headers["Upgrade-Insecure-Requests"] = "1"
+    headers["User-Agent"] = "Mozilla/5.0 (X11; Linux x86_64) " + \
+                            "AppleWebKit/537.36 (KHTML, like Gecko) " + \
+                            "Ubuntu Chromium/51.0.2704.79 " + \
+                            "Chrome/51.0.2704.79 " + \
+                            "Safari/537.36"
+
+    def __init__(self):
+        self.episode = None
+        self.callback = None
+
+    def get_sources(self, episode, callback):
+        self.episode = episode
+        self.callback = callback
+        self.episode['video_links'] = list()
+        self.episode['subtitle_links'] = list()
+
+        result = requests.get(self.generate_episode_page_url())
+        if result.status_code == 200:
+            try:
+                self.after_body_loaded(result.text)
+                self.episode['video_links'] = vizontele.sort_video_links(self.episode['video_links'])
+                self.crawl_done()
+            except:
+                self.crawl_failed()
+        else:
+            self.crawl_failed()
+
+    def generate_episode_page_url(self):
+        # Must be implemented by child class
+        pass
+
+    def after_body_loaded(self, text):
+        # Must be implemented by child class
+        pass
+
+    def crawl_failed(self):
+        self.callback(self.episode)
+
+    def crawl_done(self):
+        if self.episode['video_links'] is not None and len(self.episode['video_links']) > 0:
+            self.callback(self.episode)
+        else:
+            self.crawl_failed()
