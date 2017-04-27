@@ -1,0 +1,39 @@
+import signal
+
+import cmd2
+import sys
+
+from dila import application
+from dila.frontend import flask
+from dila.frontend import initialize
+
+TERMINATION_SIGNALS = [signal.SIGTERM, signal.SIGQUIT, signal.SIGINT]
+
+
+def register_termination_signals():
+    def terminate(signum, frame):
+        sys.exit(0)
+
+    for signum in TERMINATION_SIGNALS:
+        signal.signal(signum, terminate)
+
+class Dila(cmd2.Cmd):
+    """Dila Commandline."""
+    def do_run_dev_server(self, arg):
+        print('Running dev server')
+        flask.main().run(host='0.0.0.0', port=80)
+
+
+def run():
+    import sys
+    register_termination_signals()
+    initialize.initialize_config()
+    application.setup()
+    if len(sys.argv) > 1:
+        Dila().onecmd(' '.join(sys.argv[1:]))
+    else:
+        Dila().cmdloop()
+
+
+if __name__ == '__main__':
+    run()
