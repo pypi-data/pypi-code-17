@@ -1,0 +1,86 @@
+
+import logging_helper
+
+logging = logging_helper.setup_logging()
+
+
+class CfgItem(object):
+
+    def __init__(self,
+                 cfg_fn,
+                 cfg_root,
+                 key,
+                 **parameters):
+
+        """
+        
+        :param cfg_fn:      Function that retrieves the config object for this item
+        :param cfg_root:    Root config key to use for this config.
+        :param key:         key name for the object from parameters 
+        :param parameters:  attributes of the item
+        """
+
+        self._cfg = cfg_fn()
+        self._cfg_root = cfg_root
+        self._key_attr = key
+        self._parameters = self._extract_parameters(parameters)
+
+    @property
+    def parameters(self):
+        return self._parameters
+
+    def _extract_parameters(self,
+                            parameters):
+
+        """
+        Takes a dict of key value pairs and turns them into instance attributes
+
+        :param dict parameters:
+
+        :return: returns the passed parameters dict 
+        """
+
+        # Set each parameter as an attribute
+        for key, value in parameters.iteritems():
+            setattr(self, key, value)
+
+        return parameters
+
+    def update(self):
+
+        updated_item = self.__dict__.copy()
+
+        # Remove key parameter
+        if self._key_attr in updated_item:
+            del updated_item[self._key_attr]
+
+        # remove any hidden parameters
+        for k in [key for key, value in updated_item.iteritems() if str(key).startswith(u'_')]:
+            del updated_item[k]
+
+        key = u'{c}.{d}'.format(c=self._cfg_root,
+                                d=getattr(self, self._key_attr))
+        self._cfg[key] = updated_item
+
+    def get(self,
+            item,
+            default=None):
+
+        try:
+            return self[item]
+
+        except AttributeError:
+            return default
+
+    def __str__(self):
+        return unicode(self)
+
+    def __unicode__(self):
+        return u'\n'.join(u'{key}: {value}'.format(key=key, value=value)
+                          for key, value in self.parameters.iteritems())
+
+    def __getitem__(self, item):
+        return getattr(self, item)
+
+    def __setitem__(self, item, value):
+        setattr(self, item, value)
