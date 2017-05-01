@@ -1,0 +1,47 @@
+import os
+
+from bitfusion.lib import files
+
+class Data(object):
+  base_url = '/api/data'
+
+  def __init__(self, api_session):
+    self.api = api_session
+
+
+  def _get_signed_url(self, filename, path, group_id, account_id):
+    payload = {
+      'fileName': filename,
+      'path': path,
+      'groupId': group_id,
+      'accountId': account_id
+    }
+
+    res = self.api.post(self.base_url, payload)
+    return res['location'], res['id']
+
+
+  def upload_complete_notification(self, data_id):
+    self.api.put(os.path.join(self.base_url, data_id, 'status/uploaded'))
+
+
+  def upload(self, src_path, dst_path, group_id=None, account_id=None, callback=None):
+    tar_name = src_path.rsplit('/', 1).pop() + '.tar.gz'
+    files.create_tar(tar_name, src_path)
+
+    try:
+      url, data_id = self._get_signed_url(tar_name, dst_path, group_id, account_id)
+      files.upload_to_s3(url, tar_name, callback)
+    finally:
+      os.remove(tar_name)
+
+    self.upload_complete_notification(data_id)
+    return data_id
+
+
+  def list(self):
+    return self.api.get(self.base_url)
+
+
+  def delete(self, path):
+    pass
