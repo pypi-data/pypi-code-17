@@ -1,0 +1,2 @@
+class InvalidMiddlewareException(Exception):
+    pass
