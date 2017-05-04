@@ -1,0 +1,119 @@
+# -*- coding: utf-8 -*-
+import copy
+from abjad.tools.topleveltools import attach
+from abjad.tools.topleveltools import override
+from abjad.tools.datastructuretools.TypedList import TypedList
+
+
+class ClefList(TypedList):
+    r'''Clef list.
+
+    ..  container:: example
+
+        ::
+
+            >>> clefs = instrumenttools.ClefList(['treble', 'bass'])
+
+        ::
+
+            >>> f(clefs)
+            instrumenttools.ClefList(
+                [
+                    indicatortools.Clef(
+                        name='treble',
+                        ),
+                    indicatortools.Clef(
+                        name='bass',
+                        ),
+                    ]
+                )
+
+        ::
+
+            >>> 'treble' in clefs
+            True
+
+        ::
+
+            >>> Clef('treble') in clefs
+            True
+
+        ::
+
+            >>> 'alto' in clefs
+            False
+
+        ::
+
+            >>> show(clefs) # doctest: +SKIP
+
+        ..  doctest::
+
+            >>> lilypond_file = clefs.__illustrate__()
+            >>> f(lilypond_file[Staff])
+            \new Staff \with {
+                \override Clef.full-size-change = ##t
+                \override Rest.transparent = ##t
+                \override TimeSignature.stencil = ##f
+            } {
+                \clef "treble"
+                r8
+                \clef "bass"
+                r8
+            }
+
+    '''
+
+    ### CLASS VARIABLES ###
+
+    __slots__ = (
+        )
+
+    ### SPECIAL METHODS ###
+
+    def __illustrate__(self):
+        r'''Illustrates clefs.
+
+        ..  container:: example
+
+            ::
+
+                >>> show(clefs) # doctest: +SKIP
+
+            ..  doctest::
+
+                >>> lilypond_file = clefs.__illustrate__()
+                >>> f(lilypond_file[Staff])
+                \new Staff \with {
+                    \override Clef.full-size-change = ##t
+                    \override Rest.transparent = ##t
+                    \override TimeSignature.stencil = ##f
+                } {
+                    \clef "treble"
+                    r8
+                    \clef "bass"
+                    r8
+                }
+
+        Returns LilyPond file.
+        '''
+        import abjad
+        staff = abjad.Staff()
+        for clef in self:
+            rest = abjad.Rest((1, 8))
+            clef = copy.copy(clef)
+            attach(clef, rest)
+            staff.append(rest)
+        override(staff).clef.full_size_change = True
+        override(staff).rest.transparent = True
+        override(staff).time_signature.stencil = False
+        lilypond_file = abjad.LilyPondFile.new(staff)
+        lilypond_file.header_block.tagline = False
+        return lilypond_file
+
+    ### PRIVATE PROPERTIES ###
+
+    @property
+    def _item_coercer(self):
+        from abjad.tools import indicatortools
+        return indicatortools.Clef

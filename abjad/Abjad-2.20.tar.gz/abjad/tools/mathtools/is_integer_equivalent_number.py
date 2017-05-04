@@ -1,0 +1,26 @@
+# -*- coding: utf-8 -*-
+import numbers
+
+
+def is_integer_equivalent_number(argument):
+    '''Is true when `argument` is a number and `argument` is equivalent to an
+    integer. Otherwise false.
+
+    ..  container:: example
+
+        ::
+
+            >>> mathtools.is_integer_equivalent_number(12.0)
+            True
+
+        ::
+
+            >>> mathtools.is_integer_equivalent_number(Duration(1, 2))
+            False
+
+    Returns true or false.
+    '''
+    if isinstance(argument, numbers.Number):
+        if int(argument) == argument:
+            return True
+    return False

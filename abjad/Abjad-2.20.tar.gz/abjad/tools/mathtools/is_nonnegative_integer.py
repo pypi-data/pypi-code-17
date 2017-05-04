@@ -1,0 +1,31 @@
+# -*- coding: utf-8 -*-
+import numbers
+
+
+def is_nonnegative_integer(argument):
+    '''Is true when `argument` equals a nonnegative integer. Otherwise false.
+
+    ..  container:: example
+
+        ::
+
+            >>> mathtools.is_nonnegative_integer(99)
+            True
+
+        ::
+
+            >>> mathtools.is_nonnegative_integer(0)
+            True
+
+        ::
+
+            >>> mathtools.is_nonnegative_integer(-1)
+            False
+
+    Returns true or false.
+    '''
+    if isinstance(argument, numbers.Number):
+        if argument == int(argument):
+            if 0 <= argument:
+                return True
+    return False
