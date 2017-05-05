@@ -1,0 +1,121 @@
+from os.path import exists
+from yaml import dump
+from yaml import load
+
+from git import Repo
+
+
+class LocalRepo(object):
+    REMOTE_NAME = 'origin'
+    BRANCH_NAME = 'master'
+
+    def __init__(self, app):
+        self.app = app
+        self.git = None
+        self.config = {'files': []}
+
+    def is_created(self):
+        """
+        Is this repo created and ready?
+        """
+        if exists(self.app.get_repo_path()):
+            try:
+                Repo(self.app.get_repo_path())
+                return True
+            except:
+                return False
+        else:
+            return False
+
+    def init_git_repo(self):
+        """
+        Initalize git repo.
+        """
+        if not self.is_created():
+            Repo.init(self.app.get_repo_path(), mkdir=True)
+        self.git = Repo(self.app.get_repo_path())
+
+    def read_config(self):
+        """
+        Read config file or flush the .config attribute if no file found.
+        """
+        if exists(self.app.get_config_path()):
+            with open(self.app.get_config_path(), 'r') as file:
+                self.config = load(file)
+        else:
+            self.config = {'files': []}
+
+    def write_config(self):
+        """
+        Write config to a file in local repo.
+        """
+        with open(self.app.get_config_path(), 'w') as file:
+            dump(self.config, file, default_flow_style=False)
+
+    def add_endpoint_to_repo(self, endpoint):
+        """
+        Add path to repo and the config.
+        """
+        self.git.index.add([endpoint.get_repo_path()])
+        self.config['files'].append(endpoint.path)
+
+    def set_remote(self, remote_path):
+        """
+        Connect with remote repo.
+        """
+        remote = self._get_remote(remote_path)
+        remote.fetch()
+        was_created = self._create_remote_branch(remote)
+        self._set_remote_branch(remote)
+
+        if not was_created:
+            # if the branch was not created, then we need to pull changes from the upstream
+            remote.pull()
+
+    def _get_remote(self, remote_path):
+        """
+        Create link to the remote or use already existing one.
+        """
+        if self.REMOTE_NAME not in [remote.name for remote in self.git.remotes]:
+            return self.git.create_remote(self.REMOTE_NAME, remote_path)
+        else:
+            return self.git.remotes[self.REMOTE_NAME]
+
+    def _create_remote_branch(self, remote):
+        """
+        Create remote branch if needed. Return status of creation.
+        """
+        if self.BRANCH_NAME not in [ref.name for ref in remote.refs]:
+            remote.push('{0}:{0}'.format(self.BRANCH_NAME))
+            return True
+        return False
+
+    def _set_remote_branch(self, remote):
+        """
+        Link local branch to a remote one.
+        """
+        local = self.git.heads[self.BRANCH_NAME]
+        upstream = remote.refs[self.BRANCH_NAME]
+        local.set_tracking_branch(upstream)
+
+    def init_branch(self):
+        """
+        Make initial commit if needed.
+        """
+        if self.git.refs == []:
+            self.write_config()
+            index = self.git.index
+            index.add([self.app.get_config_path()])
+            index.commit('inital commit')
+            self.git.active_branch.rename(self.BRANCH_NAME)
+
+    def commit(self, message):
+        """
+        Commit files added to the index and push them to the repo.
+        """
+        remote = self._get_remote(None)
+        # at this point the remote should be avalible
+        # TODO: make proper error message
+
+        self.git.index.commit(message)
+        remote.push()
