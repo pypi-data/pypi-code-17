@@ -1,0 +1,9 @@
+STATUS_ACTIVE = 1
+STATUS_ARCHIVED = 2
+STATUS_DELETED = 3
+
+STATUS_CHOICES = (
+    (STATUS_ACTIVE, 'Active'),
+    (STATUS_ARCHIVED, 'Archived'),
+    (STATUS_DELETED, 'Deleted')
+)
