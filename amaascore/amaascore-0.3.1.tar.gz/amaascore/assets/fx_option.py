@@ -1,0 +1,28 @@
+from __future__ import absolute_import, division, print_function, unicode_literals
+
+from datetime import date
+from decimal import Decimal
+
+from amaascore.assets.derivative import Derivative
+from amaascore.assets.option_mixin import OptionMixin
+
+
+class ForeignExchangeOption(Derivative, OptionMixin):
+    """
+    An over the counter Option with an underlying FX pair.
+    """
+
+    def __init__(self, asset_manager_id, asset_id, option_type, strike, premium, underlying_asset_id, option_style,
+                 issue_date=date.min, asset_status='Active', asset_issuer_id=None,
+                 display_name='', description='', links=None, references=None,
+                 *args, **kwargs):
+        self.option_type = option_type
+        self.strike = strike
+        self.premium = premium
+        self.underlying_asset_id = underlying_asset_id
+        self.option_style = option_style
+        super(ForeignExchangeOption, self).__init__(asset_manager_id=asset_manager_id, asset_id=asset_id,
+                                                    fungible=False, asset_issuer_id=asset_issuer_id,
+                                                    issue_date=issue_date, asset_status=asset_status,
+                                                    display_name=display_name, description=description,
+                                                    links=links, references=references, *args, **kwargs)
