@@ -1,0 +1,5 @@
+JSON = "json"
+INT = "int"
+FLOAT = "float"
+STR = "str"
+BOOL = "bool"
