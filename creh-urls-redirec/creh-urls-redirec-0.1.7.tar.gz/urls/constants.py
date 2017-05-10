@@ -1,0 +1,7 @@
+STATUS_TRUE = 1
+STATUS_FALSE = 2
+
+STATUS_CHOICES = (
+    (STATUS_TRUE, 'True'),
+    (STATUS_FALSE, 'False')
+)
