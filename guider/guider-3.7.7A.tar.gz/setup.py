@@ -1,0 +1,37 @@
+import site, os
+from distutils.core import setup
+
+setup(
+    name = 'guider',
+    version = '3.7.7A',
+    license = 'GPL2',
+    description = 'A system-wide analyzer of performance',
+    author = 'Peace Lee',
+    author_email = 'iipeace5@gmail.com',
+    url = 'https://github.com/iipeace/guider',
+    download_url = 'https://github.com/iipeace/guider/archive/master.zip',
+    keywords = ['guider', 'linux', 'analyzer', 'performance', 'profile', 'trace', 'kernel'],
+    packages = ['guider'],
+    data_files= [('/usr/sbin', ['guider/guider'])],
+    classifiers = [],
+)
+
+try:
+    os.mkdir('/usr/share/guider')
+except:
+    pass
+
+for path in site.getsitepackages():
+    try:
+        os.symlink('%s/guider/guider.pyc' % path, '/usr/share/guider/guider.pyc')
+    except:
+        pass
+
+'''
+upload command from http://peterdowns.com/posts/first-time-with-pypi.html
+    $ python setup.py register -r pypitest
+    $ python setup.py sdist upload -r pypitest
+    $ python setup.py register -r pypi
+    $ python setup.py sdist upload -r pypi
+'''
+
