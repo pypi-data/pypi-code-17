@@ -1,0 +1,2 @@
+class WinnowError(Exception):
+    pass
